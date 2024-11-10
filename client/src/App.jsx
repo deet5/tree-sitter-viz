@@ -1,4 +1,25 @@
+/* eslint-disable react/prop-types */
 import TreeChart from './TreeChart'
+
+function Button({ text }) {
+  return (
+    <button>{text}</button>
+  )
+}
+
+function CodeArea({ defaultCode }) {
+  return (
+    <textarea defaultValue={defaultCode} />
+  )
+}
+
+const defaultCode = `public class Main {
+  public static void main(String[] args) {
+    Integer a = 5;
+    Integer b = 10;
+    Integer c = a + b;
+  }
+}`;
 
 // Sample data for the tree
 const data = 
@@ -54,6 +75,10 @@ function App() {
 
   return (
     <>
+      <div>
+        <Button text="AST"/>
+        <CodeArea defaultCode={defaultCode}/>
+      </div>
       <div>
         <TreeChart data={data}/>
       </div>
