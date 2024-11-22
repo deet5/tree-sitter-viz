@@ -1,86 +1,83 @@
 /* eslint-disable react/prop-types */
 import TreeChart from './TreeChart'
+import { useState, useEffect } from 'react'
+import CodeEditor from '@uiw/react-textarea-code-editor';
 
-function Button({ text }) {
+function Button({ text, onClick }) {
   return (
-    <button>{text}</button>
+    <button className={text} onClick={onClick}>{text}</button>
   )
 }
 
-function CodeArea({ defaultCode }) {
-  return (
-    <textarea defaultValue={defaultCode} />
-  )
-}
-
-const defaultCode = `public class Main {
-  public static void main(String[] args) {
-    Integer a = 5;
-    Integer b = 10;
-    Integer c = a + b;
-  }
+const defaultCode = `void f(int[] array) {
+    boolean swapped = true;
+    for (int i = 0; i < array.length && swapped; i++) {
+        swapped = false;
+        for (int j = 0; j < array.length - 1 - i; j++) {
+           if (array[j] > array[j+1]) {
+               int temp = array[j];
+               array[j] = array[j+1];
+               array[j+1]= temp;
+               swapped = true;
+           }
+        }
+    }
 }`;
 
-// Sample data for the tree
-const data = 
-{
-  "name": "local_variable_declaration",
-  "text": "Integer a = 5;",
-  "normalizedName": "Integer a = 5;",
-  "children": [
-    {
-      "name": "integral_type",
-      "text": "Integer",
-      "normalizedName": "integer",
-      "children": [
-        {
-          "name": "Integer",
-          "children": []
-        }
-      ]
-    },
-    {
-      "name": "variable_declarator",
-      "text": "a = 5",
-      "normalizedName": "a = 5",
-      "children": [
-        {
-          "name": "identifier",
-          "text": "a",
-          "normalizedName": "a",
-          "children": [
-            {
-              "name": "a",
-              "children": []
-            }
-          ]
-        },
-        {
-          "name": "decimal_integer_literal",
-          "text": "5",
-          "normalizedName": "|",
-          "children": [
-            {
-              "name": "5",
-              "children": []
-            }
-          ]
-        }
-      ]
-    }
-  ]
-};
-
 function App() {
+  const [code, setCode] = useState(defaultCode);
+  const [graphData, setGraphData] = useState(null);
+
+  const fetchAST = async (code) => {
+    try {
+      const response = await fetch('http://localhost:3001/ast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ code })
+      });
+      const data = await response.json();
+      setGraphData(data);
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  const handleASTBttnClick = () => {
+    fetchAST(code);
+  }
+
+  useEffect(() => {
+    fetchAST(defaultCode);
+  }, []);
 
   return (
     <>
-      <div>
-        <Button text="AST"/>
-        <CodeArea defaultCode={defaultCode}/>
+      <div className="inputContent">
+        <Button text="AST" onClick={handleASTBttnClick}/>
+        <CodeEditor 
+          value={code}
+          language="java"
+          onChange={(evn) => {
+            setCode(evn.target.value);
+          }}
+          padding={15}
+          data-color-mode='light'
+          style={{
+            backgroundColor: 'white',
+            fontFamily: 'ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace',
+            fontSize: 12,
+            width: 500,
+            height: 250,
+            borderRadius: 2,
+            overflowY: 'scroll',
+          }}
+          />
       </div>
       <div>
-        <TreeChart data={data}/>
+        <TreeChart className='astTree' data={graphData}/>
       </div>
     </>
   )

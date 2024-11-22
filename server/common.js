@@ -5,7 +5,7 @@ function normalizeName(original, defaultString) {
         .toLowerCase()
         .replace(/\\n/g, "") // escaped new lines
         .replace(/\s+/g, "") // whitespace
-        .replace(/["',]/g, "") // quotes, apostrophes, commas
+        .replace(/["\',]/g, "") // quotes, apostrophes, commas
         .replace(/[^\x20-\x7E]/g, ""); // weird characters
 
     const stripped = original.replace(/[^A-Za-z]/g, "");

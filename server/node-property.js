@@ -1,3 +1,4 @@
+const { name } = require('tree-sitter-java');
 const { splitToSubtokens } = require('./common'); // Importing helper function
 
 const BoxedTypes = {
@@ -16,32 +17,45 @@ const NUMERIC_KEEP_VALUES = new Set(["0", "1", "32", "64"]);
 const Max_Label_Length = 8;
 
 class NodeProperty {
-    /*  This is a wrapper class for a Tree-sitter node in the AST.
-        We maintain some useful user defined properties for each tree-sitter node.
+  /*  This is a wrapper class for a Tree-sitter node in the AST.
+      We maintain some useful user defined properties for each tree-sitter node.
 
-        Abstract type: It abstracts the original node.type. 
-        For now we only consider abstracting Java boxed types into primitive types.
+      Abstract type: It abstracts the original node.type. 
+      For now we only consider abstracting Java boxed types into primitive types.
 
-    Normalized name: It is the normalized version of the node.text.
+      Normalized name: It is the normalized version of the node.text.
 
-    is_leaf: It is a boolean value indicating whether the node is a leaf node or not.
+      is_leaf: It is a boolean value indicating whether the node is a leaf node or not.
 
-    In the initialization, we also append the operator to the abstract type 
-        if the node is a binary, unary or assignment expression.
+      In the initialization, we also append the operator to the abstract type 
+          if the node is a binary, unary or assignment expression.
 
-    For simplicity, if the node is a leaf node, 
-        we normalize the name of the node
-        1 set the separator to "|" of camel case or snake case names to differentiate the separator used in the AST path.
-        2 remove the special characters and whitespaces from the name */
+      For simplicity, if the node is a leaf node, 
+          we normalize the name of the node
+          1 set the separator to "|" of camel case or snake case names to differentiate the separator used in the AST path.
+          2 remove the special characters and whitespaces from the name 
+  */
 
   constructor(node, isLeaf) {
     this.abstractType = node.type;
     this.normalizedName = node.text;
     this.isLeaf = isLeaf;
+    this.child_id = 0;
 
     // Set the abstract type for Java nodes with boxed types.
     if (this.isJavaBoxedType(node)) {
       this.abstractType = this.getPrimitiveType(node);
+    }
+
+    var operator = "";
+    if (this.isBinaryExpr(node) || this.isUnaryExpr(node) || this.isAssignExpr(node)) {
+      // get operator from the text using regex
+      operator = node.text.match(/[\+\-\*\/\%\=\&\|\!\^\<\>\?]/g);
+      operator = operator ? operator.join("") : "";
+    }
+
+    if (operator) {
+      this.abstractType += ":" + operator
     }
 
     if (this.isLeaf) {
@@ -88,7 +102,7 @@ class NodeProperty {
 
   isNumericLiteral(node) {
     // Return true if the node is a numeric literal (integer or float).
-    return node.type === "integer_literal" || node.type === "float_literal";
+    return node.type === "integer_literal" || node.type === "float_literal" || node.type === "decimal_integer_literal";
   }
 
 }
