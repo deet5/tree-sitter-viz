@@ -1,4 +1,4 @@
-const Tree = require('./parser');
+const fomattedTree = require('./parser');
 const PathExtractor = require('./path-extractor');
 
 const code = `
@@ -22,7 +22,7 @@ const code = `
     }
 `;
 
-const ast = Tree(code);
+const ast = fomattedTree(code);
 
 //save the tree to a file 
 const fs = require('fs');

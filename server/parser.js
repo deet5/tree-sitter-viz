@@ -34,16 +34,15 @@ class BuildTree {
         return {
             name: this.node.type,
             text: this.node.text,
-            childId: this.node.childId,
             children
         };
     }
 }
 
-function treeToJSON(sourceCode) {
+function fomattedTree(sourceCode) {
     const tree = parser.parse(sourceCode);
     const rootNode = new BuildTree(tree.rootNode).build();
     return rootNode;
 }
 
-module.exports = treeToJSON;
+module.exports = fomattedTree;

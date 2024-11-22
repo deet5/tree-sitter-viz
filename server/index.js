@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const treeToJSON = require('./parser');
+const fomattedTree = require('./parser');
 
 const PORT = 3001;
 
@@ -11,7 +11,7 @@ app.use(express.json());
 
 app.post('/ast', (req, res) => {
     const { code } = req.body;
-    const ast = treeToJSON(code);
+    const ast = fomattedTree(code);
     res.json(ast);
 });
 

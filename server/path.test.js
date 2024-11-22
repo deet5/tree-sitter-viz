@@ -1,4 +1,4 @@
-const Tree = require('./parser');
+const fomattedTree = require('./parser');
 const PathExtractor = require('./path-extractor');
 
 const code = `
@@ -22,7 +22,9 @@ const code = `
     }
 `;
 
-const ast = Tree(code);
+const ast = fomattedTree(code);
+const node2Find = new PathExtractor(ast);
+
 
 test('test 2 siblings path extraction', () => {
     const source = {
@@ -39,8 +41,8 @@ test('test 2 siblings path extraction', () => {
       "childId": 2
     };
 
-    const node2Find = new PathExtractor(ast).extractPath(source, target);
-    expect(node2Find).toBe('(void_type1)^(method_declaration)_(identifier2)');
+
+    expect(node2Find.extractPath(source, target)).toBe('(void_type1)^(method_declaration)_(identifier2)');
 });
 
 test('MaxPathWidth is greater than 2', () => {
@@ -58,8 +60,7 @@ test('MaxPathWidth is greater than 2', () => {
       "childId": 2
     };
 
-    const node2Find1 = new PathExtractor(ast).extractPath(source, target);
-    expect(node2Find1).toBe("The path width exceeds MaxPathWidth=2.");
+    expect(node2Find.extractPath(source, target)).toBe("The path width exceeds MaxPathWidth=2.");
 });
 
 test('MaxPathLength is greater than 8', () => {
@@ -77,9 +78,41 @@ test('MaxPathLength is greater than 8', () => {
     "childId": 0
   };
 
-  const node2Find2 = new PathExtractor(ast).extractPath(source, target);
-  expect(node2Find2).toBe("The path length exceeds MaxPathLength=8.");
+  expect(node2Find.extractPath(source, target)).toBe("The path length exceeds MaxPathLength=8.");
 });
 
+test('test path length 4', () => {
+  const source = {
+    "name": "identifier",
+    "text": "source",
+    "children": [],
+    "childId": 1
+  }
 
+  const target = {
+    "name": "identifier",
+    "text": "target",
+    "children": [],
+    "childId": 1
+  }
 
+  expect(node2Find.extractPath(source, target)).toBe('(identifier1)^(formal_parameter)^(formal_parameters)_(formal_parameter)_(identifier1)');
+});
+
+test('test path length 6', () => {
+  const source = {
+    "name": "identifier",
+    "text": "a",
+    "children": [],
+    "childId": 0
+  }
+
+  const target = {
+    "name": "identifier",
+    "text": "b",
+    "children": [],
+    "childId": 0
+  }
+  
+  expect(node2Find.extractPath(source, target)).toBe('(identifier0)^(variable_declarator)^(local_variable_declaration)^(block)_(local_variable_declaration)_(variable_declarator)_(identifier0)');
+});

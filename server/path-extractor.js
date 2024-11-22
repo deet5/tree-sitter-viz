@@ -37,6 +37,7 @@ class PathExtractor {
 
             const pathWidth = Math.abs(sourceSibling.childId - targetSibling.childId);
             if (pathWidth > MaxPathWidth) {
+                console.log(targetSibling);
                 return "The path width exceeds MaxPathWidth=2.";
             }
         }
@@ -67,7 +68,11 @@ class PathExtractor {
         const targetStackTruncated = targetStack.slice(lenCommonPrefix);
         for (let i = 0; i < targetStackTruncated.length; i++) {
             let tgtChildId = "";
-            if (i === 0 || ParentTypeToAddChildId.has(targetStackTruncated[i - 1].name)) {
+            if (i > 0 && (i === targetStackTruncated.length - 1 || ParentTypeToAddChildId.has(targetStackTruncated[i].name))) {
+                tgtChildId = `${targetStackTruncated[i].childId}`;
+            }
+
+            if (targetStackTruncated.length === 1 || ParentTypeToAddChildId.has(targetStackTruncated[i].name)) {
                 tgtChildId = `${targetStackTruncated[i].childId}`;
             }
 
