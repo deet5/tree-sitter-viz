@@ -27,4 +27,4 @@ npm install
 
 ### Client
 
-Client is now fully functional. First start the sever from `/server` directory by running `npm start`. Then naviage to the `/client` directory and run `npm run dev`. Go to [text](http://localhost:5173/) and you can see a window where you can enter code and see the corresponding AST. Change the code to see different tree outputs. 
+Client is now fully functional. First start the sever from `/server` directory by running `npm start`. Then navige to the `/client` directory and run `npm run dev`. Go to [text](http://localhost:5173/) and you can see a window where you can enter code and see the corresponding AST. Change the code to see different tree outputs. 
