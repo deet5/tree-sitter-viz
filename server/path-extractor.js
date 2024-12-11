@@ -1,129 +1,172 @@
-const MaxPathLength = 8;
-const MaxPathWidth = 2;
+const Parser = require('tree-sitter');
+const { MethodContents } = require('./common');
+const FunctionVisitor = require('./function-visitor');
+const AstPathSet = require('./ast-path-set');
+const { AstPath } = require('./ast-path');
+const common = require('./common');
+const Java = require('tree-sitter-java');
 
-ParentTypeToAddChildId = new Set(["assignment_expression", "array_access", "method_invocation"]);
+const MinCodeLen = 2;
+const MaxCodeLen = 1000;
+const MaxPathLen = 8;
+const MaxPathWidth = 2;
+const MaxChildId = Infinity;
+
+const UpSymbol = '^';
+const DownSymbol = '_';
+const LParen = '(';
+const RParen = ')';
+const PathSeparator = '';
+
+const ParentTypeToAddChildId = new Set([
+  'assignment_expression',
+  'array_access',
+  'method_invocation',
+]);
 
 class PathExtractor {
-    constructor(tree) {
-        this.tree = tree;
+  constructor() {
+    this.parser = new Parser().setLanguage(Java);
+  }
+
+  extractPaths(code) {
+    const rootNode = this.parseFile(code);
+
+    const functionVisitor = new FunctionVisitor();
+    functionVisitor.visit(rootNode);
+    const methods = functionVisitor.getMethods();
+
+    return this.extractMethodsPaths(methods);
+  }
+
+  parseFile(code) {
+    const tree = this.parser.parse(code);
+    return tree.rootNode;
+  }
+
+  extractMethodsPaths(methods) {
+    const methodsPaths = [];
+
+    for (const method of methods) {
+      if (
+        method.methodLength < MinCodeLen ||
+        method.methodLength > MaxCodeLen
+      ) {
+        continue;
+      }
+
+      const pathsOfMethod = this.extractSingleMethodPaths(method);
+      if (!pathsOfMethod.isEmpty()) {
+        methodsPaths.push(pathsOfMethod);
+      }
     }
 
-    extractPath(source, target) {
-        const sourceStack = this.getPathStack(source);
-        const targetStack = this.getPathStack(target);
+    return methodsPaths;
+  }
 
-        const lenCommonPrefix = this.lenCommonPrefix(sourceStack, targetStack);
-
-        /*
-        Calculate the path length.
-        The path length is sourceStack.length + targetStack.length - 2 * lenCommonPrefix.
-        The path length is within MaxPathLength.
-        */
-        const pathLength = sourceStack.length + targetStack.length - 2 * lenCommonPrefix;
-        if (pathLength > MaxPathLength) {
-            return "The path length exceeds MaxPathLength=8.";
+  extractSingleMethodPaths(method) {
+    const leaves = method.leaves;
+    const astPaths = new AstPathSet(method.methodName);
+    
+    for (let i = 0; i < leaves.length; i++) {
+      for (let j = i + 1; j < leaves.length; j++) {
+        const path = this.extractPath(leaves[i], leaves[j], PathSeparator);
+        if (path) {
+          astPaths.addPath(leaves[i], leaves[j], path);
         }
-
-
-        /*
-        Calculate the path width. 
-        The path width is the difference between the child ids of the first nodes that differ.
-        The path width is within MaxPathWidth.
-        */ 
-        
-        if (sourceStack.length > lenCommonPrefix && targetStack.length > lenCommonPrefix) {
-            const sourceSibling = sourceStack[lenCommonPrefix];
-            const targetSibling = targetStack[lenCommonPrefix];
-
-            const pathWidth = Math.abs(sourceSibling.childId - targetSibling.childId);
-            if (pathWidth > MaxPathWidth) {
-                console.log(targetSibling);
-                return "The path width exceeds MaxPathWidth=2.";
-            }
-        }
-
-        let p = "";
-        const cpIdx = sourceStack.length - lenCommonPrefix;
-        const sourceStackTruncated = sourceStack.slice(lenCommonPrefix).reverse();
-
-        for (let i = 0; i < cpIdx; i++) {
-            let srcChildId = "";
-            
-            if (i === 0 || ParentTypeToAddChildId.has(sourceStackTruncated[i - 1].name)) {
-                srcChildId = `${sourceStackTruncated[i].childId}`;
-            }
-
-            p += `(${sourceStackTruncated[i].name}${srcChildId})^`;
-        }
-
-        // construct common prefix
-        const cpNode = sourceStack[lenCommonPrefix - 1];
-        let cpChildId = "";
-        if (ParentTypeToAddChildId.has(cpNode.name)) {
-            cpChildId = `${cpNode.childId}`;
-        }
-        p += `(${cpNode.name}${cpChildId})`;
-
-        // construct the path from the common prefix to the target node
-        const targetStackTruncated = targetStack.slice(lenCommonPrefix);
-        for (let i = 0; i < targetStackTruncated.length; i++) {
-            let tgtChildId = "";
-            if (i > 0 && (i === targetStackTruncated.length - 1 || ParentTypeToAddChildId.has(targetStackTruncated[i].name))) {
-                tgtChildId = `${targetStackTruncated[i].childId}`;
-            }
-
-            if (targetStackTruncated.length === 1 || ParentTypeToAddChildId.has(targetStackTruncated[i].name)) {
-                tgtChildId = `${targetStackTruncated[i].childId}`;
-            }
-
-            p += `_(${targetStackTruncated[i].name}${tgtChildId})`;
-        }
-
-        return p;
+      }
     }
 
-    getPathStack(node) {
-        const path = [];
+    return astPaths;
+  }
 
-        const findNode = (node, find) => {
-            if (node.name === find.name 
-                && node.text === find.text 
-                && node.children.length == 0
-                && node.childId === find.childId) {
-                path.push(node);
-                return path;
-            }
+  extractPath(source, target, separator) {
+    const sourceStack = this.#getPathStack(source);
+    const targetStack = this.#getPathStack(target);
 
-            path.push(node);
-
-            for (let i = 0; i < node.children.length; i++) {
-                const child = node.children[i];
-                const result = findNode(child, find);
-                if (result) {
-                    return result;
-                }
-            }
-
-            path.pop();
-        }
-
-        findNode(this.tree, node);
-        return path;
+    const { lenCommonPrefix, idxSrc, idxTar } = this.#lenCommonPrefix(
+      sourceStack,
+      targetStack
+    );
+    
+    if (
+      idxSrc < 0 ||
+      idxTar < 0 ||
+      sourceStack.length + targetStack.length - 2 * lenCommonPrefix >
+        MaxPathLen
+    ) {
+      return '';
     }
 
-    lenCommonPrefix(sourceStack, targetStack) {
-        let lenCommonPrefix = 0;
+    const pathWidth =
+      this.#getChildId(sourceStack[idxSrc]) -
+      this.#getChildId(targetStack[idxTar]);
 
-        while (lenCommonPrefix < sourceStack.length && lenCommonPrefix < targetStack.length) {
-            if (sourceStack[lenCommonPrefix] !== targetStack[lenCommonPrefix]) {
-                break;
-            }
-
-            lenCommonPrefix++;
-        }
-
-        return lenCommonPrefix;
+    if (Math.abs(pathWidth) > MaxPathWidth) {
+      return '';
     }
+
+    let path = '';
+    const cpIdx = sourceStack.length - lenCommonPrefix;
+    for (let i = 0; i < cpIdx; i++) {
+      const node = sourceStack[i];
+      const childId =
+        i === 0 || ParentTypeToAddChildId.has(node.parent.type)
+          ? this.#saturateId(this.#getChildId(node))
+          : '';
+      path += `(${common.nodePropertyManager.getNodeData(node).abstractType}${childId})${UpSymbol}`;
+    }
+
+    const commonNode = sourceStack[sourceStack.length - lenCommonPrefix];
+    const commonChildId = ParentTypeToAddChildId.has(commonNode.type)
+      ? this.#saturateId(this.#getChildId(commonNode))
+      : '';
+    path += `(${common.nodePropertyManager.getNodeData(commonNode).abstractType}${commonChildId})`;
+    
+    for (let i = targetStack.length - lenCommonPrefix - 1; i >= 0; i--) {
+      const node = targetStack[i];
+      const childId =
+        i === 0 ||
+        ParentTypeToAddChildId.has(node.parent.type)
+          ? this.#saturateId(this.#getChildId(node))
+          : '';
+      path += `${DownSymbol}(${common.nodePropertyManager.getNodeData(node).abstractType}${childId})`;
+    }
+
+    // console.log(path);
+    return path;
+  }
+
+  #getPathStack(node) {
+    const stack = [];
+    while (node) {
+      stack.push(node);
+      node = node.parent;
+    }
+    return stack;
+  }
+
+  #lenCommonPrefix(sourceStack, targetStack) {
+    let i = sourceStack.length - 1;
+    let j = targetStack.length - 1;
+    let lenCommonPrefix = 0;
+
+    while (i >= 0 && j >= 0 && sourceStack[i] === targetStack[j]) {
+      lenCommonPrefix++;
+      i--;
+      j--;
+    }
+
+    return { lenCommonPrefix, idxSrc: i, idxTar: j };
+  }
+
+  #getChildId(node) {
+    return common.nodeIdManager.getNodeData(node);
+  }
+
+  #saturateId(id) {
+    return Math.min(Number(id), MaxChildId);
+  }
 }
 
 module.exports = PathExtractor;

@@ -1,5 +1,27 @@
 const BLANK_WORD = "BLANK";
 
+class MethodContents {
+    constructor(leaves, methodName, methodLength) {
+        this.leaves = leaves;
+        this.methodName = methodName;
+        this.methodLength = methodLength;
+    }
+}
+
+class NodeDataManager {
+    constructor() {
+        this.nodeData = new Map();
+    }
+
+    setNodeData(node, data) {
+        this.nodeData.set(node, data);
+    }
+
+    getNodeData(node) {
+        return this.nodeData.get(node);
+    }
+}
+
 function normalizeName(original, defaultString) {
     original = original
         .toLowerCase()
@@ -29,7 +51,13 @@ function splitToSubtokens(inputStr) {
     return subtokens.map(token => normalizeName(token, ''));
 }
 
+const nodeIdManager = new NodeDataManager();
+const nodePropertyManager = new NodeDataManager();
+
 module.exports = {
+    MethodContents,
+    nodeIdManager,
+    nodePropertyManager,
     normalizeName,
     splitToSubtokens,
     BLANK_WORD

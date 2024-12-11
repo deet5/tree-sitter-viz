@@ -13,7 +13,6 @@ class BuildTree {
 
     build() {
         const children = [];
-
         for (let i = 0; i < this.node.childCount; i++) {
             const child = this.node.child(i);
             const nodeProperty = new NodeProperty(child, child.childCount === 0);
