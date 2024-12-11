@@ -12,6 +12,7 @@ git clone https://github.com/deet5/tree-sitter-viz.git
 4. Now open the client directory and install required packages `npm install`.
 
 # Running the program
+![Screen Recording 2024-12-11 at 2 03 13 AM](https://github.com/user-attachments/assets/2f2f3c1f-a1cc-4286-ad4e-82f56a462124)
 
 # Server
 - Navigate to the server in your terminal and run `npm start`.
