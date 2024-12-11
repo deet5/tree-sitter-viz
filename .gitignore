@@ -1,4 +1,5 @@
 node_modules/
 ast.json
+.DS_Store
 
 test.js
