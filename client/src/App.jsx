@@ -55,6 +55,7 @@ function App() {
 
   return (
     <>
+      <h1>TREE-SITTER-VIZ</h1>
       <div className="inputContent">
         <Button text="AST" onClick={handleASTBttnClick}/>
         <CodeEditor 
@@ -71,7 +72,7 @@ function App() {
             fontSize: 12,
             width: 500,
             height: 250,
-            borderRadius: 2,
+            borderRadius: 3,
             overflowY: 'scroll',
           }}
           />
